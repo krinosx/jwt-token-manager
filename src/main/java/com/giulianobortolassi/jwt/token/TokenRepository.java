@@ -6,12 +6,17 @@ public interface TokenRepository {
 
     Token registerToken(Token token);
 
-    Token removeToken(Token token) throws TokenNotFoundExcpetion;
+    Token removeToken(Token token) throws TokenNotFoundException;
 
-    Token getToken(Token token) throws TokenNotFoundExcpetion;
+    Token getToken(Token token) throws TokenNotFoundException;
 
-    Token getTokenById(String id) throws TokenNotFoundExcpetion;
+    Token getTokenById(String id) throws TokenNotFoundException;
 
     // TODO implement filter options
-    List<Token> listTokens() throws TokenNotFoundExcpetion;
+
+    /**
+     * Return a list with all active tokens.
+     * @return an list with all active tokens or a empty list if none.
+     */
+    List<Token> listTokens();
 }

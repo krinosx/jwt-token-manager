@@ -11,17 +11,21 @@ public class Token {
     private List<String> roles;
     private Date issuedTime;
     private Date expirationTime;
+    /** Sign key used to this token. This information must never leave the server */
+    private String signKey;
+
 
     public Token() {
     }
 
-    public Token(String id, String token, String user, List<String> roles, Date issuedTime, Date expirationTime) {
+    public Token(String id, String token, String user, List<String> roles, Date issuedTime, Date expirationTime, String signKey) {
         this.id = id;
         this.token = token;
         this.user = user;
         this.roles = roles;
         this.issuedTime = issuedTime;
         this.expirationTime = expirationTime;
+        this.signKey = signKey;
     }
 
     public String getId() {
@@ -70,5 +74,9 @@ public class Token {
 
     public Date getExpirationTime() {
         return expirationTime;
+    }
+
+    public String getSignKey() {
+        return signKey;
     }
 }

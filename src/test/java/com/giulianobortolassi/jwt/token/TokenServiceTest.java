@@ -14,6 +14,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.*;
@@ -178,7 +179,7 @@ public class TokenServiceTest {
             when(tokenRepository.getTokenById("123-456")).thenAnswer(new Answer<Token>() {
                 @Override
                 public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
-                    throw new TokenNotFoundExcpetion();
+                    throw new TokenNotFoundException();
                 }
             });
         } catch (Exception e) {
@@ -193,7 +194,7 @@ public class TokenServiceTest {
             assertNotNull( e );
             assertNotNull(e.getMessage());
             assertTrue(e.getMessage().equalsIgnoreCase("Invalid token.") );
-            assertTrue( e.getCause() instanceof TokenNotFoundExcpetion );
+            assertTrue( e.getCause() instanceof TokenNotFoundException);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -216,7 +217,7 @@ public class TokenServiceTest {
         try {
             when(tokenRepository.getTokenById("123-456")).thenAnswer(new Answer<Token>() {
                 @Override
-                public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+                public Token answer(InvocationOnMock invocationOnMock) {
                     return token;
                 }
             });
@@ -252,7 +253,7 @@ public class TokenServiceTest {
             when(tokenRepository.getTokenById("123-456")).thenAnswer(new Answer<Token>() {
                 @Override
                 public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
-                    throw new TokenNotFoundExcpetion();
+                    throw new TokenNotFoundException();
                 }
             });
         } catch (Exception e) {
@@ -263,18 +264,64 @@ public class TokenServiceTest {
         try {
             service.revokeToken(token);
             fail("Exception expected");
-        }catch (TokenNotFoundExcpetion e){
+        } catch (TokenNotFoundException e){
             assertNotNull(e);
-            assertTrue(e instanceof TokenNotFoundExcpetion);
+            assertTrue(e instanceof TokenNotFoundException);
 
         } catch (Exception e) {
             e.printStackTrace();
             fail();
         }
-
     }
 
     @Test
     public void listActiveTokens() {
+
+        String uuid = UUID.randomUUID().toString();
+
+        when(tokenRepository.listTokens()).thenAnswer(new Answer<List<Token>>() {
+            @Override
+            public List<Token> answer(InvocationOnMock invocationOnMock) throws Throwable {
+
+                List<Token> tokenList = new ArrayList<>();
+
+                Token token = new Token();
+                token.setId(uuid);
+
+                tokenList.add(token);
+                tokenList.add(token);
+                tokenList.add(token);
+
+                return tokenList;
+
+            }
+        });
+
+        List<Token> tokens = service.listActiveTokens();
+
+        assertNotNull(tokens);
+        assertTrue(tokens.size() == 3);
+        for( Token tok : tokens ){
+            assertEquals(tok.getId(), uuid);
+        }
+    }
+
+    /**
+     * Check behavior when the list is empty. The service must return an empty list
+     * instead of null
+     */
+    @Test
+    public void listActiveTokensEmpty() {
+
+        when(tokenRepository.listTokens()).thenAnswer(new Answer<List<Token>>() {
+            @Override
+            public List<Token> answer(InvocationOnMock invocationOnMock) throws Throwable {
+                return null;
+            }
+        });
+
+        List<Token> tokens = service.listActiveTokens();
+        assertNotNull(tokens);
+        assertTrue(tokens.size() == 0);
     }
 }

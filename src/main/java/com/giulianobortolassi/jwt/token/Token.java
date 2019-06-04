@@ -76,6 +76,10 @@ public class Token {
         return expirationTime;
     }
 
+    public void setSignKey(String signKey) {
+        this.signKey = signKey;
+    }
+
     public String getSignKey() {
         return signKey;
     }

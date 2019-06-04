@@ -1,9 +1,7 @@
 package com.giulianobortolassi.jwt.token;
 
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,28 +35,34 @@ public class TokenService {
         // TODO: Improve the SIGN_KEY usage. It can be usefull to delegate the key generation to a external class in
         // order to implement different key generation strategies.
 
-        String roles_names;
-
-        StringBuilder builder = new StringBuilder();
-        for(String role_id:roles){
-            builder.append(role_id).append(",");
+        String roles_names = "";
+        if ( roles != null ) {
+            StringBuilder builder = new StringBuilder();
+            for (String role_id : roles) {
+                builder.append(role_id).append(",");
+            }
+            builder.deleteCharAt(builder.lastIndexOf(","));
+            roles_names = builder.toString();
         }
-        builder.deleteCharAt(builder.lastIndexOf(","));
-
-        roles_names = builder.toString();
-
 
         UUID uuid = UUID.randomUUID();
         Date issuedDate = new Date();
         Date expiryDate = new Date(issuedDate.getTime() + EXPIRATION_TIME);
 
+
+        Map<String, Object> extraClaims = new HashMap<>();
+        if( !roles_names.isEmpty() ){
+            extraClaims.put("ROLES", roles_names);
+        }
+
         String tokenString = Jwts.builder()
+                .setClaims( extraClaims )
                 .setId(uuid.toString())
                 .setSubject(username)
                 .signWith(SignatureAlgorithm.HS256, SIGN_KEY)
                 .setIssuedAt(issuedDate)
                 .setExpiration(expiryDate)
-                .claim("ROLES", roles_names)
+                //.claim("ROLES", roles_names)
                 .compact();
 
         Token token = new Token();
@@ -68,7 +72,7 @@ public class TokenService {
         token.setToken(tokenString);
         token.setIssuedTime(issuedDate);
         token.setExpirationTime(expiryDate);
-
+        token.setSignKey(SIGN_KEY);
         return repository.registerToken( token );
     }
 
@@ -119,7 +123,7 @@ public class TokenService {
      * @param tokenStr the full JWT token. It will be parsed and revokeToken(Token token) method will be invoked.
      * @throws TokenNotFoundException if given token does not exists
      */
-    public void revokeToken(String tokenStr) throws TokenNotFoundException {
+    public void revokeToken(String tokenStr) throws TokenNotFoundException, TokenExpiredException {
         revokeToken ( parseToken(tokenStr) );
     }
 
@@ -162,17 +166,23 @@ public class TokenService {
      * @param tokenStr a full JWT token to be parsed into a Token object.
      * @return a {@link Token} object
      */
-    Token parseToken(String tokenStr){
-        Claims claims = Jwts.parser()
-                .setSigningKey(SIGN_KEY)
-                .parseClaimsJws(tokenStr)
-                .getBody();
-        List<String> roles = null;
-        if( claims.get("roles") != null ) {
-            roles = Arrays.asList(claims.get("roles").toString().split(","));
-        }
+    Token parseToken(String tokenStr) throws TokenExpiredException {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(SIGN_KEY)
+                    .parseClaimsJws(tokenStr)
+                    .getBody();
 
-        return new Token(claims.getId(),tokenStr,claims.getSubject(),roles,claims.getIssuedAt(),claims.getExpiration(), SIGN_KEY);
+            List<String> roles = null;
+            if( claims.get("roles") != null ) {
+                roles = Arrays.asList(claims.get("roles").toString().split(","));
+            }
+
+            return new Token(claims.getId(),tokenStr,claims.getSubject(),roles,claims.getIssuedAt(),claims.getExpiration(), SIGN_KEY);
+        } catch (ExpiredJwtException|MalformedJwtException|SignatureException e) {
+            e.printStackTrace();
+            throw new TokenExpiredException( e.getMessage() );
+        }
     }
 
 

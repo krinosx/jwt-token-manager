@@ -55,14 +55,15 @@ public class TokenServiceTest {
         try {
             assertNotNull("Fail to inject TokenService.",service);
 
-            Token my_superuser = service.generateToken("my_superuser", roles);
+            Token generatedToken = service.generateToken("my_superuser", roles);
 
-            assertNotNull(my_superuser);
+            assertNotNull(generatedToken);
             verify(tokenRepository).registerToken(any());
 
-            List<String> rolesResult = my_superuser.getRoles();
+            List<String> rolesResult = generatedToken.getRoles();
             assertNotNull(rolesResult);
             assertTrue(rolesResult.size()==2 );
+            assertTrue( generatedToken.getUser().equalsIgnoreCase("my_superuser") );
             assertThat( rolesResult, containsInAnyOrder("ADMIN","AUDIT") );
 
         } catch (Exception e) {
@@ -70,6 +71,49 @@ public class TokenServiceTest {
             Assertions.fail("Unexpected exception");
         }
     }
+
+    /**
+     * Points to Check
+     *  - Role name generation
+     *  - Expiration Time
+     *  - call to register token
+     *
+     */
+    @Test
+    public void generateTokenWithoutRoles() {
+
+        // Created a mock to avoid repository logic contamination
+        when(tokenRepository.registerToken(any())).thenAnswer(new Answer<Token>() {
+            @Override
+            public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+                Object[] arguments = invocationOnMock.getArguments();
+                return (Token) arguments[0];
+            }
+        });
+
+
+
+        try {
+            assertNotNull("Fail to inject TokenService.",service);
+
+            Token generatedToken = service.generateToken("my_superuser", null);
+
+            assertNotNull(generatedToken);
+            verify(tokenRepository).registerToken(any());
+
+            List<String> rolesResult = generatedToken.getRoles();
+            assertNull(rolesResult);
+            assertTrue( generatedToken.getUser().equalsIgnoreCase("my_superuser") );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Assertions.fail("Unexpected exception");
+        }
+    }
+
+
+
+
 
     /**
      * The check token method need token ID and expiration dates set

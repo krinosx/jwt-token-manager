@@ -1,3 +1,6 @@
+server:
+  port: 8888
+
 jwt:
   signkey: "MyKey"
   default:

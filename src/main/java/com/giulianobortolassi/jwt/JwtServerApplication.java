@@ -7,7 +7,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @SpringBootApplication
 @EnableWebMvc
-@EnableAutoConfiguration
 public class JwtServerApplication {
 
 	public static void main(String[] args) {

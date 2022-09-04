@@ -1,27 +1,23 @@
 package com.giulianobortolassi.jwt.token;
 
-import io.jsonwebtoken.lang.Collections;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class TokenServiceTest {
 
@@ -44,27 +40,30 @@ public class TokenServiceTest {
         // Created a mock to avoid repository logic contamination
         when(tokenRepository.registerToken(any())).thenAnswer(new Answer<Token>() {
             @Override
-            public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Token answer(InvocationOnMock invocationOnMock) {
                 Object[] arguments = invocationOnMock.getArguments();
                 return (Token) arguments[0];
             }
         });
 
-        List<String> roles = new ArrayList<>(Collections.arrayToList(new String[]{"ADMIN","AUDIT"}));
+        List<String> roles =  List.of("ADMIN","AUDIT");
 
         try {
-            assertNotNull("Fail to inject TokenService.",service);
+
+            assertThat(service).as("Fail to inject TokenService.").isNotNull();
 
             Token generatedToken = service.generateToken("my_superuser", roles);
 
-            assertNotNull(generatedToken);
+            assertThat(generatedToken).isNotNull();
             verify(tokenRepository).registerToken(any());
 
             List<String> rolesResult = generatedToken.getRoles();
-            assertNotNull(rolesResult);
-            assertTrue(rolesResult.size()==2 );
-            assertTrue( generatedToken.getUser().equalsIgnoreCase("my_superuser") );
-            assertThat( rolesResult, containsInAnyOrder("ADMIN","AUDIT") );
+            assertThat(rolesResult).isNotNull();
+            assertThat(rolesResult.size()).isEqualTo(2);
+            assertThat(generatedToken.getUser().toLowerCase()).isEqualTo("my_superuser");
+
+            assertThat(rolesResult).containsExactlyInAnyOrder("ADMIN","AUDIT");
+
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -85,7 +84,7 @@ public class TokenServiceTest {
         // Created a mock to avoid repository logic contamination
         when(tokenRepository.registerToken(any())).thenAnswer(new Answer<Token>() {
             @Override
-            public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Token answer(InvocationOnMock invocationOnMock) {
                 Object[] arguments = invocationOnMock.getArguments();
                 return (Token) arguments[0];
             }
@@ -94,16 +93,17 @@ public class TokenServiceTest {
 
 
         try {
-            assertNotNull("Fail to inject TokenService.",service);
+            assertThat(service).as("Fail to inject TokenService.").isNotNull();
 
             Token generatedToken = service.generateToken("my_superuser", null);
 
-            assertNotNull(generatedToken);
+            assertThat(generatedToken).isNotNull();
             verify(tokenRepository).registerToken(any());
 
             List<String> rolesResult = generatedToken.getRoles();
-            assertNull(rolesResult);
-            assertTrue( generatedToken.getUser().equalsIgnoreCase("my_superuser") );
+            assertThat(rolesResult).isNull();
+
+            assertThat(generatedToken.getUser().toLowerCase()).isEqualTo("my_superuser");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -136,18 +136,18 @@ public class TokenServiceTest {
         try {
             when(tokenRepository.getTokenById("123-456")).thenAnswer(new Answer<Token>() {
                 @Override
-                public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+                public Token answer(InvocationOnMock invocationOnMock) {
                     return token;
                 }
             });
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
 
         try {
             Token tokenRetorno = service.checkToken(token);
-            assertNotNull(tokenRetorno);
+            assertThat(tokenRetorno).isNotNull();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -177,20 +177,20 @@ public class TokenServiceTest {
         try {
             when(tokenRepository.getTokenById("123-456")).thenAnswer(new Answer<Token>() {
                 @Override
-                public Token answer(InvocationOnMock invocationOnMock) throws Throwable {
+                public Token answer(InvocationOnMock invocationOnMock) {
                     return token;
                 }
             });
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
 
         try {
-            Token tokenRetorno = service.checkToken(token);
+            Token ignored = service.checkToken(token);
             fail("Expected an exception");
         } catch (TokenExpiredException e) {
-            assertNotNull( e );
+            assertThat( e ).isNotNull();
         } catch (Exception e) {
             e.printStackTrace();
             fail("Unexpected Exception");
@@ -200,7 +200,7 @@ public class TokenServiceTest {
 
     /**
      * The check token method need token ID and expiration dates set
-     *
+     * <p>
      * This test check the scenario where token is not in database
      *
      */
@@ -228,17 +228,17 @@ public class TokenServiceTest {
             });
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail( e.getMessage() );
         }
 
         try {
-            Token tokenRetorno = service.checkToken(token);
+            Token ignored = service.checkToken(token);
             fail("Expected an exception");
         } catch (TokenExpiredException e) {
-            assertNotNull( e );
-            assertNotNull(e.getMessage());
-            assertTrue(e.getMessage().equalsIgnoreCase("Invalid token.") );
-            assertTrue( e.getCause() instanceof TokenNotFoundException);
+            assertThat( e ).isNotNull();
+            assertThat( e.getMessage()).isNotNull();
+            assertThat( e.getMessage()).isEqualTo("Invalid token.");
+            assertThat( e ).hasCauseExactlyInstanceOf(TokenNotFoundException.class);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -248,7 +248,7 @@ public class TokenServiceTest {
     }
 
     /**
-     * Check call to removeToeken with Valid Token
+     * Check call to removeToken with Valid Token
      */
     @Test
     public void revokeTokenValid() {
@@ -267,7 +267,7 @@ public class TokenServiceTest {
             });
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
 
         try {
@@ -277,7 +277,7 @@ public class TokenServiceTest {
 
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
 
     }
@@ -302,19 +302,19 @@ public class TokenServiceTest {
             });
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
 
         try {
             service.revokeToken(token);
             fail("Exception expected");
-        } catch (TokenNotFoundException e){
-            assertNotNull(e);
-            assertTrue(e instanceof TokenNotFoundException);
+        } catch (TokenNotFoundException e) {
+            assertThat(e).isNotNull();
+            assertThat(e).isInstanceOf(TokenNotFoundException.class);
 
         } catch (Exception e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
         }
     }
 
@@ -325,7 +325,7 @@ public class TokenServiceTest {
 
         when(tokenRepository.listTokens()).thenAnswer(new Answer<List<Token>>() {
             @Override
-            public List<Token> answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public List<Token> answer(InvocationOnMock invocationOnMock) {
 
                 List<Token> tokenList = new ArrayList<>();
 
@@ -343,10 +343,10 @@ public class TokenServiceTest {
 
         List<Token> tokens = service.listActiveTokens();
 
-        assertNotNull(tokens);
-        assertTrue(tokens.size() == 3);
+        assertThat(tokens).isNotNull();
+        assertThat(tokens.size()).isEqualTo(3);
         for( Token tok : tokens ){
-            assertEquals(tok.getId(), uuid);
+            assertThat(tok.getId()).isEqualTo(uuid);
         }
     }
 
@@ -359,13 +359,13 @@ public class TokenServiceTest {
 
         when(tokenRepository.listTokens()).thenAnswer(new Answer<List<Token>>() {
             @Override
-            public List<Token> answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public List<Token> answer(InvocationOnMock invocationOnMock) {
                 return null;
             }
         });
 
         List<Token> tokens = service.listActiveTokens();
-        assertNotNull(tokens);
-        assertTrue(tokens.size() == 0);
+        assertThat(tokens).isNotNull();
+        assertThat(tokens.size()).isEqualTo(0);
     }
 }

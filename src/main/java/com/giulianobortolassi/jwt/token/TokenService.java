@@ -2,10 +2,14 @@ package com.giulianobortolassi.jwt.token;
 
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.Encoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.security.Key;
 import java.util.*;
 
 /**
@@ -52,14 +56,15 @@ public class TokenService {
 
         Map<String, Object> extraClaims = new HashMap<>();
         if( !roles_names.isEmpty() ){
-            extraClaims.put("ROLES", roles_names);
+            extraClaims.put(Token.ROLES_KEY, roles_names);
         }
+
 
         String tokenString = Jwts.builder()
                 .setClaims( extraClaims )
                 .setId(uuid.toString())
                 .setSubject(username)
-                .signWith(SignatureAlgorithm.HS256, SIGN_KEY)
+                .signWith(getSignatureKey(), SignatureAlgorithm.HS256)
                 .setIssuedAt(issuedDate)
                 .setExpiration(expiryDate)
                 //.claim("ROLES", roles_names)
@@ -73,8 +78,18 @@ public class TokenService {
         token.setIssuedTime(issuedDate);
         token.setExpirationTime(expiryDate);
         token.setSignKey(SIGN_KEY);
+
         return repository.registerToken( token );
     }
+
+
+    private Key getSignatureKey() {
+        // TODO: Store the encoded key on application.yml file
+        String encodedKey =  Encoders.BASE64.encode(SIGN_KEY.getBytes());
+
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(encodedKey));
+    }
+
 
     /**
      * Check if the given token is valid:
@@ -102,18 +117,20 @@ public class TokenService {
      *          in the past or if the token was not found in repository
      *
      */
-    public Token checkToken(Token token) throws TokenExpiredException {
+    public Token checkToken(final Token token) throws TokenExpiredException {
+
         try {
-            token = repository.getTokenById(token.getId());
+            Token storedToken = repository.getTokenById(token.getId());
+
+            Date now = new Date(System.currentTimeMillis());
+            if( storedToken.getExpirationTime().before(now) ){
+                throw new TokenExpiredException();
+            }
+            return storedToken;
+
         } catch (TokenNotFoundException e) {
             throw new TokenExpiredException("Invalid token.",e);
         }
-
-        Date now = new Date(System.currentTimeMillis());
-        if( token.getExpirationTime().before(now) ){
-            throw new TokenExpiredException();
-        }
-        return token;
     }
 
 
@@ -168,18 +185,20 @@ public class TokenService {
      */
     Token parseToken(String tokenStr) throws TokenExpiredException {
         try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(SIGN_KEY)
-                    .parseClaimsJws(tokenStr)
+
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSignatureKey())
+                    .build().parseClaimsJws(tokenStr)
                     .getBody();
 
+
             List<String> roles = null;
-            if( claims.get("roles") != null ) {
-                roles = Arrays.asList(claims.get("roles").toString().split(","));
+            if( claims.get(Token.ROLES_KEY) != null ) {
+                roles = Arrays.asList(claims.get(Token.ROLES_KEY).toString().split(","));
             }
 
             return new Token(claims.getId(),tokenStr,claims.getSubject(),roles,claims.getIssuedAt(),claims.getExpiration(), SIGN_KEY);
-        } catch (ExpiredJwtException|MalformedJwtException|SignatureException e) {
+        } catch (ExpiredJwtException|MalformedJwtException|SecurityException e) {
             e.printStackTrace();
             throw new TokenExpiredException( e.getMessage() );
         }

@@ -14,6 +14,8 @@ public class Token {
     /** Sign key used to this token. This information must never leave the server */
     private String signKey;
 
+    public static String ROLES_KEY = "roles";
+
 
     public Token() {
     }

@@ -7,9 +7,14 @@ import com.giulianobortolassi.jwt.token.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/v1/token")
@@ -18,14 +23,21 @@ public class JwtIssuesController {
     @Autowired
     private TokenService tokenService;
 
+    private final int MAX_CREDENTIALS = 10;
+
 
     @RequestMapping(method = RequestMethod.POST )
-    public ResponseEntity<String> generateToken(@RequestParam(name = "user") String user, @RequestParam(name = "credentials", required = false) List<String> credentials) {
+    public ResponseEntity<String> generateToken(String user, String credentials) {
         if( user == null || user.isEmpty() ) {
             return ResponseEntity.badRequest().body( "User is mandatory." );
         }
 
-        Token token = tokenService.generateToken(user, credentials);
+        List<String> prividedCredentials = Collections.emptyList();
+        if(!Objects.isNull(credentials) && !credentials.isEmpty()) {
+            prividedCredentials = List.of(credentials.split(",",MAX_CREDENTIALS));
+        }
+
+        Token token = tokenService.generateToken(user, prividedCredentials);
 
         return new ResponseEntity<>(token.getToken(), HttpStatus.OK );
     }
@@ -34,7 +46,8 @@ public class JwtIssuesController {
      * Validate the given token
      *
      * @param token The challenging token.
-     * @return a HTTP 200 and the token as the body if the token is valid with. A HTTP 403 https://tools.ietf.org/html/rfc7231#section-6.5.3 if token has expired or was not found.
+     * @return a HTTP 200 and the token as the body if the token is valid with. An HTTP 403
+     * https://tools.ietf.org/html/rfc7231#section-6.5.3 if token has expired or was not found.
      */
     @RequestMapping(value = "/{token:.+}", method = RequestMethod.GET )
     public ResponseEntity<String> checkToken(@PathVariable(name = "token") String token){

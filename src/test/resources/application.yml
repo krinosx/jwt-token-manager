@@ -1,4 +1,4 @@
 jwt:
-  signkey: "MyKey"
+  signkey: MyKey1234567890-1234567890-1234567890"
   default:
     expirationtime: 600000

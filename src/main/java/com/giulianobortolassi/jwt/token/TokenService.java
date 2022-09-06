@@ -40,7 +40,7 @@ public class TokenService {
         // order to implement different key generation strategies.
 
         String roles_names = "";
-        if ( roles != null ) {
+        if ( roles != null && !roles.isEmpty() ) {
             StringBuilder builder = new StringBuilder();
             for (String role_id : roles) {
                 builder.append(role_id).append(",");
@@ -59,7 +59,6 @@ public class TokenService {
             extraClaims.put(Token.ROLES_KEY, roles_names);
         }
 
-
         String tokenString = Jwts.builder()
                 .setClaims( extraClaims )
                 .setId(uuid.toString())
@@ -67,7 +66,6 @@ public class TokenService {
                 .signWith(getSignatureKey(), SignatureAlgorithm.HS256)
                 .setIssuedAt(issuedDate)
                 .setExpiration(expiryDate)
-                //.claim("ROLES", roles_names)
                 .compact();
 
         Token token = new Token();
@@ -138,7 +136,7 @@ public class TokenService {
      * Remove token from database in order to invalidate it
      *
      * @param tokenStr the full JWT token. It will be parsed and revokeToken(Token token) method will be invoked.
-     * @throws TokenNotFoundException if given token does not exists
+     * @throws TokenNotFoundException if given token does not exist
      */
     public void revokeToken(String tokenStr) throws TokenNotFoundException, TokenExpiredException {
         revokeToken ( parseToken(tokenStr) );

@@ -16,7 +16,7 @@ public interface TokenRepository {
 
     /**
      * Return a list with all active tokens.
-     * @return an list with all active tokens or a empty list if none.
+     * @return a list with all active tokens or a empty list if none.
      */
     List<Token> listTokens();
 }

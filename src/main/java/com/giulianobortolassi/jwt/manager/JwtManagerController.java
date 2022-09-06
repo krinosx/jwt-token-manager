@@ -14,6 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+
+/**
+ * Internal API for administrative purposes.
+ * This API should not be exposed to other applications, and may be used only wit administrative
+ * credentials.
+ *  Actions
+ *    - Revoke active tokens
+ *    - List active tokens
+ *    - Check issued token history
+ *
+ */
 @RestController
 @RequestMapping("/v1/manager/token")
 public class JwtManagerController {
@@ -31,7 +42,7 @@ public class JwtManagerController {
     }
 
     @RequestMapping(value = "/{tokenId:.+}", method = RequestMethod.DELETE )
-    public ResponseEntity revokeToken(@PathVariable(name = "tokenId") String token){
+    public ResponseEntity<String> revokeToken(@PathVariable(name = "tokenId") String token){
         try {
             tokenService.revokeToken(token);
         } catch (TokenNotFoundException | TokenExpiredException e) {
